@@ -1,12 +1,10 @@
 ---
-title: "C00K3D CTF 25 Official Rev Writeups"
+title: 'C00K3D CTF 25 Official Rev Writeups'
 date: '2025-08-31'
 tags: ['C00K3D CTF', 'RE', 'Writeups']
 draft: false
 summary: Will more focus on how challenge was made and the intended way to solve it, though there are many small tricks to solve the challenges as well for you to figure it out :)
 ---
-
-
 
 ## Table of Contents
 
@@ -15,15 +13,11 @@ summary: Will more focus on how challenge was made and the intended way to solve
 - [Lost](#lost)
 - [The Chip8 Emulator](#the-chip8-emulator)
 
-
 # Frustation
 
 Chall Description:
 
 ![alt text](/static/images/cookedctf25/frustation/des.png)
-
-
-
 
 ## Code
 
@@ -77,9 +71,9 @@ enc_data located at .data:00000000004CA100
 
 unsigned char enc_data[] =
 {
-  0xFE, 0xC2, 0xC3, 0xD9, 0x9B, 0xD9, 0xFE, 0xC2, 0x99, 0xC3, 
-  0xC4, 0xC3, 0xDE, 0xC3, 0xCB, 0xDE, 0xC3, 0xC5, 0xC4, 0x9A, 
-  0xCC, 0xF5, 0xEC, 0xD8, 0xDF, 0xD9, 0xDE, 0xCB, 0xDE, 0xC3, 
+  0xFE, 0xC2, 0xC3, 0xD9, 0x9B, 0xD9, 0xFE, 0xC2, 0x99, 0xC3,
+  0xC4, 0xC3, 0xDE, 0xC3, 0xCB, 0xDE, 0xC3, 0xC5, 0xC4, 0x9A,
+  0xCC, 0xF5, 0xEC, 0xD8, 0xDF, 0xD9, 0xDE, 0xCB, 0xDE, 0xC3,
   0xC5, 0xC4, 0xAA
 };
 
@@ -125,16 +119,16 @@ gef➤
 
 Gives us that the flag is Correct !
 So its very clear, that the binary is changing the behavior when the debugger is attached or vice versa.
-But this can only be possible if there is a ptrace implementation in the binary, but we clearly didnt saw 
+But this can only be possible if there is a ptrace implementation in the binary, but we clearly didnt saw
 any ptrace implementation in the main() or check() func.
 
-So here our knowledge will come into play :)    (yes you can solve it directly by jumping)
+So here our knowledge will come into play :) (yes you can solve it directly by jumping)
 
 ![alt text](/static/images/cookedctf25/frustation/premain.png)
 
-
 There are alot things/functions which are initiated pre main()
-the function 
+the function
+
 ```c
 
 unsigned __int64 do_global_ctors_aux()
@@ -143,13 +137,12 @@ unsigned __int64 do_global_ctors_aux()
 
 This is the important, Question arises how do we know that, You can check the .init_array to make things easier for yourself.
 
-
 ```c
 __attribute__((constructor))
 ```
-the programmer can mark it on any custom function.
-and all those will be pointed by the .init_array, but for this challenge it is very obvious you can just search ``ctors``
 
+the programmer can mark it on any custom function.
+and all those will be pointed by the .init_array, but for this challenge it is very obvious you can just search `ctors`
 
 ```c
 
@@ -173,11 +166,11 @@ unsigned __int64 do_global_ctors_aux()
 
 ```
 
-here you can see the syscall which is basically a ptrace checks if there is not a debugger than will load the orginal bytes of the flag, other wise fake flag is loaded in the 
+here you can see the syscall which is basically a ptrace checks if there is not a debugger than will load the orginal bytes of the flag, other wise fake flag is loaded in the
 check()
 
 So just replace the enc_data with these values and the KEY is 0xAA and you get the Secret
-``ahDamn_whoTFkn0wsL1nux_inT3rnalS``
+`ahDamn_whoTFkn0wsL1nux_inT3rnalS`
 
 thats all lol, it is not tbh exactly linux internals more of a C programming thing put it looks cool xD
 
@@ -192,11 +185,6 @@ Correct: COOK3D{ahDamn_whoTFkn0wsL1nux_inT3rnalS}
 
 This is the correct flag :)
 
-
-
-
-
-
 # WarmUp
 
 Chall Description:
@@ -206,7 +194,7 @@ Chall Description:
 So this was a classic password checker GUI, so the first step is to locate the WinMain function, which you can find easily if you have saw the writeup of demo's rev/GUI Licence checker
 inside the Winmain we can see this function.
 
-## Code 
+## Code
 
 ```cpp
 
@@ -237,10 +225,9 @@ __int64 __fastcall sub_140001A62(HINSTANCE a1)
 }
 ```
 
-We are concerned about this ``  WndClass.lpfnWndProc = (WNDPROC)sub_140001724;``
+We are concerned about this `  WndClass.lpfnWndProc = (WNDPROC)sub_140001724;`
 
-
-In that function i can see that ``sub_1400015E7`` is resposible for validation
+In that function i can see that `sub_1400015E7` is resposible for validation
 
 ```cpp
     {
@@ -251,7 +238,7 @@ In that function i can see that ``sub_1400015E7`` is resposible for validation
       else
         MessageBoxW(0LL, L"Submit the flag as C00K3D{key_you_entered}", "C", 0);
     }
-  ```
+```
 
 I have renamed the function name so that it maybe clear what they are doing
 
@@ -318,10 +305,9 @@ __int64 __fastcall number_seq_gen(int hardcoded4k, _DWORD *buffer)
 }
 ```
 
-So basically you can reimplement it and check the buffer indexes ``return v7 != buffer[367] || v6 != buffer[377] || v5 != buffer[389] || v4 != buffer[385];``
+So basically you can reimplement it and check the buffer indexes `return v7 != buffer[367] || v6 != buffer[377] || v5 != buffer[389] || v4 != buffer[385];`
 
 or you can simple but a breakpoint and check it dynamically the buffer indexes are you password.
-
 
 # Lost
 
@@ -331,13 +317,11 @@ Chall Description:
 
 It was a Simgle 3d Godot game, and its assets were encrypted (AES 256), For that I recompiled the godot custom export template with a 32byte key as an env variable (https://docs.godotengine.org/en/4.4/contributing/development/compiling/compiling_with_script_encryption_key.html),
 This is done so that when ever the game is exported its assets will be decrypted at runtime so the game assets cannot be stolen, but obviously the godot engine has to place
-that AES Key somewhere statically in the binary right? So it is done by default by the Godot engine, the key is placed as a byte array of 32byte just bellow a string ``fae.is_null`` something like that
+that AES Key somewhere statically in the binary right? So it is done by default by the Godot engine, the key is placed as a byte array of 32byte just bellow a string `fae.is_null` something like that
 just search for the string and extract the aes 32 byte key and yes it can take alot of time to decompile. Enter the key in the godot decompiler.
 
-perhaps watch this video its like 10 times better than my writeup : 
+perhaps watch this video its like 10 times better than my writeup :
 https://www.youtube.com/watch?v=fWjuFmYGoSY&t=53s&ab_channel=Giffi
-
-
 
 # The Chip8 Emulator
 
@@ -360,7 +344,7 @@ For better understanding of chip8 emulator you can check this https://austinmorl
                 - (((nn ^ i1 & (((v25 | v23 | v23 ^ i1 ^ nn) - ((v25 | v23) ^ (v17 | v25) & (v23 ^ i1 ^ nn)) - 1) ^ ((v23 | i1 ^ nn) - (v23 ^ v17 & (i1 ^ nn)) - 1)))
                   - (i1 | nn)) & (v25 | v17))
                 - 1);
-    
+
     v24 = ((((v17 << ((char)(7 * nn) % 29)) ^ (v17 >> ((char)(5 * nn) % 23)))
           + ((v17 >> ((char)(5 * nn) % 23)) | (v17 << ((char)(7 * nn) % 29)))) ^ ((~(v17 << ((char)(7 * nn) % 29)) | (v17 >> ((char)(5 * nn) % 23)))
                                                                                 + ((v17 >> ((char)(5 * nn) % 23)) | (v17 << ((char)(7 * nn) % 29)))))
@@ -368,16 +352,14 @@ For better understanding of chip8 emulator you can check this https://austinmorl
         - (v17 ^ (v17 >> ((char)(5 * nn) % 23)));
     v17 = 0;
     emu_key[nn] = charset[(unsigned __int8)(v24 >> (nn & 7)) % 0x3EuLL];
-  
+
   byte_1B4A0 = 0;
 ```
 
 Key was generated at runtime by MBA
 This was being done in Emulator::init()
 
-
 And from the description it is very clear that the bug is in vCPU, so lets see what the chip9 CPU exactly does !
-
 
 ```cpp
 
@@ -540,7 +522,6 @@ unsigned __int64 __fastcall Cpu::execute(Cpu *this)
 
 you analyze easy instruction but when you will reach the case: 0xF
 
-
 ```cpp
 unsigned __int64 __fastcall Cpu::decode_F_instruction(Cpu *this)
 {
@@ -612,7 +593,7 @@ LABEL_19:
 }
 ```
 
-So If you have read the blog you know there is no such instruction which exists in chip emulator as 0xFxFF, the v1 == 255 is 0xff, the MSB of first byte was checked in the first 
+So If you have read the blog you know there is no such instruction which exists in chip emulator as 0xFxFF, the v1 == 255 is 0xff, the MSB of first byte was checked in the first
 switch statement.
 But its emulated in our chip8, and if we check this emulated function it is indeed doing the decryption using the the library functions.
 
@@ -720,7 +701,7 @@ unsigned __int64 __fastcall Cpu::superChipRendrer(Cpu *this)
 
 ```
 
-it is also opening a file, we can see the ofstream in this function, so it is decrypting our flag it self the _3nc is the encrypted flag, and the key was copied into bytearray3 in cpu::cache()
+it is also opening a file, we can see the ofstream in this function, so it is decrypting our flag it self the \_3nc is the encrypted flag, and the key was copied into bytearray3 in cpu::cache()
 So if we trigger this function we will get our flag.txt in our directory :)
 
 The description is very clear that there is a flaw in cpu and you will get the flag in quad cycle, means it we have to trigger this function in 4 CPU cycles.
@@ -754,22 +735,7 @@ After patching to FxFF where x can be any number/char it is not emulated dw
 I replaced x with the number of cycle it will take for cpu :)
 Save the game, and run the emulator you will get the flag.txt :p
 
-Flag: ``C00K3D{N0w_y0uMight_h4v3_an_1dea_H0w_3mulatorsWoRK}``
+Flag: `C00K3D{N0w_y0uMight_h4v3_an_1dea_H0w_3mulatorsWoRK}`
 
 How different is the stripped one?, The opcodes are in the switch case statement, so still it can be recognized that the function is emulating 0xfxff
 We can also jump directly to it by xrefs :p
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

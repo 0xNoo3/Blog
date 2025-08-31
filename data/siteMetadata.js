@@ -1,7 +1,7 @@
 /** @type {import("pliny/config").PlinyConfig } */
 const siteMetadata = {
   title: "Noob's Blog",
-  author: 'Ali Hamza', 
+  author: 'Ali Hamza',
   headerTitle: 'NOOB',
   description: 'A blog dedicated to share my journey in Cyber Security',
   language: 'en-us',
