@@ -7,10 +7,9 @@ interface Project {
 
 const projectsData: Project[] = [
   {
-    title: 'No Proj',
-    description: `no description`,
-    imgSrc: '/static/images/google.png',
-    href: '',
+    title: 'COOK3D CTF 25',
+    description: `Intended Solutions`,
+    href: '/blog/C00K3D_CTF25/C00K3D_CTF25',
   },
   // {
   //   title: 'The Time Machine',
