@@ -3,7 +3,7 @@ const siteMetadata = {
   title: "Noob's Blog",
   author: 'Ali Hamza',
   headerTitle: 'NOOB',
-  description: 'A blog dedicated to share my journey in Cyber Security',
+  description: "Maybe I'll write something or maybe not, not sure lol",
   language: 'en-us',
   theme: 'system', // system, dark or light
   siteUrl: 'https://tailwind-nextjs-starter-blog.vercel.app',
