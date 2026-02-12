@@ -1,0 +1,325 @@
+---
+title: 'C00K3D CTF 25 Official Rev Writeups'
+date: '2025-08-31'
+tags: ['C00K3D CTF', 'RE', 'Writeups']
+draft: false
+summary: Will more focus on how challenge was made and the intended way to solve it, though there are many small tricks to solve the challenges as well for you to figure it out :)
+---
+
+## Table of Contents
+
+- [Frustation](#frustation)
+- [WarmUp](#warmup)
+- [Lost](#lost)
+- [The Chip8 Emulator](#the-chip8-emulator)
+
+# Frustation
+
+Chall Description:
+
+![alt text](/static/images/cookedctf25/frustation/des.png)
+
+## Code
+
+```c
+int __fastcall main(int argc, const char **argv, const char **envp)
+{
+  __int64 v3; // rdx
+  _QWORD v5[6]; // [rsp+0h] [rbp-30h] BYREF
+
+  v5[5] = __readfsqword(0x28u);
+  puts("Exclude the flag format C00K3D{}\n\nEnter Secret ", argv, envp);
+  if ( _isoc23_scanf("%32s", v5) == 1 )
+  {
+    checkValid(v5);
+    return 0;
+  }
+  else
+  {
+    puts("No input.", v5, v3);
+    return 1;
+  }
+}
+
+```
+
+main() reads the user input and passes to the checkValid() function as a param
+
+```c
+unsigned __int64 __fastcall checkValid(const char *a1)
+{
+  __int64 v1; // rdx
+  unsigned __int64 i; // [rsp+18h] [rbp-38h]
+  _BYTE v4[40]; // [rsp+20h] [rbp-30h] BYREF
+  unsigned __int64 v5; // [rsp+48h] [rbp-8h]
+
+  v5 = __readfsqword(0x28u);
+  for ( i = 0LL; i <= 0x20; ++i )
+    v4[i] = KEY ^ *(&enc_data + i);
+  if ( j_strcmp_ifunc(a1, v4) )
+    puts("Wrong!", v4, v1);
+  else
+    printf("Correct: COOK3D{%s}", a1);
+  return v5 - __readfsqword(0x28u);
+}
+```
+
+So here it is clear that there is encoded data which is xored with a key, and then compared to the input pretty easy right?
+
+```c
+enc_data located at .data:00000000004CA100
+
+unsigned char enc_data[] =
+{
+  0xFE, 0xC2, 0xC3, 0xD9, 0x9B, 0xD9, 0xFE, 0xC2, 0x99, 0xC3,
+  0xC4, 0xC3, 0xDE, 0xC3, 0xCB, 0xDE, 0xC3, 0xC5, 0xC4, 0x9A,
+  0xCC, 0xF5, 0xEC, 0xD8, 0xDF, 0xD9, 0xDE, 0xCB, 0xDE, 0xC3,
+  0xC5, 0xC4, 0xAA
+};
+
+and KEY located at .data:00000000004CA0E0
+
+KEY = 0xAA;
+
+```
+
+So when we XOR each byte of enc_data with the KEY it gives us
+
+```
+This1sTh3initiation0f_Frustation
+```
+
+But when we put it as a password it gives wrong message
+
+```bash
+
+$ ./frustation
+Exclude the flag format C00K3D{}
+
+Enter Secret
+This1sTh3initiation0f_Frustation
+Wrong!
+
+```
+
+What !!! maybe we should check whats happening in the debugger, the binary is changing its behavior?
+
+```bash
+
+gef➤  r
+Starting program: /mnt/e/Cooked CTF/Finals/Frustation/frustation
+Exclude the flag format C00K3D{}
+
+Enter Secret
+This1sTh3initiation0f_Frustation
+Correct: COOK3D{This1sTh3initiation0f_Frustation}[Inferior 1 (process 583) exited normally]
+gef➤
+
+```
+
+Gives us that the flag is Correct !
+So its very clear, that the binary is changing the behavior when the debugger is attached or vice versa.
+But this can only be possible if there is a ptrace implementation in the binary, but we clearly didnt saw
+any ptrace implementation in the main() or check() func.
+
+So here our knowledge will come into play :) (yes you can solve it directly by jumping)
+
+![alt text](/static/images/cookedctf25/frustation/premain.png)
+
+There are alot things/functions which are initiated pre main()
+the function
+
+```c
+
+unsigned __int64 do_global_ctors_aux()
+
+```
+
+This is the important, Question arises how do we know that, You can check the .init_array to make things easier for yourself.
+
+```c
+__attribute__((constructor))
+```
+
+the programmer can mark it on any custom function.
+and all those will be pointed by the .init_array, but for this challenge it is very obvious you can just search `ctors`
+
+```c
+
+unsigned __int64 do_global_ctors_aux()
+{
+  int v0; // r9d
+  unsigned __int64 v2; // [rsp+38h] [rbp-8h]
+
+  v2 = __readfsqword(0x28u);
+  *(_DWORD *)_errno_location() = 0;
+  if ( syscall(101, 0, 0, 0, 0, v0) != -1 )
+  {
+    enc_data = 0xDDF5C4C7CBEEC2CBLL;
+    qword_4CA108 = 0xDD9AC4C1ECFEC5C2LL;
+    qword_4CA110 = 0xC3F5D2DFC49BE6D9LL;
+    qword_4CA118 = 0xF9C6CBC4D899FEC4LL;
+    byte_4CA120 = -86;
+  }
+  return v2 - __readfsqword(0x28u);
+}
+
+```
+
+here you can see the syscall which is basically a ptrace checks if there is not a debugger than will load the orginal bytes of the flag, other wise fake flag is loaded in the
+check()
+
+So just replace the enc_data with these values and the KEY is 0xAA and you get the Secret
+`ahDamn_whoTFkn0wsL1nux_inT3rnalS`
+
+thats all lol, it is not tbh exactly linux internals more of a C programming thing put it looks cool xD
+
+```bash
+$ ./frustation
+Exclude the flag format C00K3D{}
+
+Enter Secret
+ahDamn_whoTFkn0wsL1nux_inT3rnalS
+Correct: COOK3D{ahDamn_whoTFkn0wsL1nux_inT3rnalS}
+```
+
+This is the correct flag :)
+
+# WarmUp
+
+Chall Description:
+
+![alt text](/static/images/cookedctf25/frustation/des2.png)
+
+So this was a classic password checker GUI, so the first step is to locate the WinMain function, which you can find easily if you have saw the writeup of demo's rev/GUI Licence checker
+inside the Winmain we can see this function.
+
+## Code
+
+```cpp
+
+__int64 __fastcall sub_140001A62(HINSTANCE a1)
+{
+  MSG Msg; // [rsp+60h] [rbp-80h] BYREF
+  WNDCLASSW WndClass; // [rsp+90h] [rbp-50h] BYREF
+
+  *(_QWORD *)&WndClass.style = 0LL;
+  *(_QWORD *)&WndClass.cbClsExtra = 0LL;
+  WndClass.hIcon = 0LL;
+  WndClass.lpszMenuName = 0LL;
+  WndClass.hbrBackground = (HBRUSH)5;
+  WndClass.hCursor = LoadCursorA(0LL, (LPCSTR)0x7F00);
+  WndClass.hInstance = a1;
+  WndClass.lpszClassName = "C";
+  WndClass.lpfnWndProc = (WNDPROC)sub_140001724;
+  if ( !RegisterClassW(&WndClass) )
+    return 0xFFFFFFFFLL;
+  CreateWindowExW(0, "C", L"WarmUp by Cooked CTF", 0x10CF0000u, 100, 70, 500, 200, 0LL, 0LL, 0LL, 0LL);
+  memset(&Msg, 0, sizeof(Msg));
+  while ( GetMessageA(&Msg, 0LL, 0, 0) )
+  {
+    TranslateMessage(&Msg);
+    DispatchMessageA(&Msg);
+  }
+  return 0LL;
+}
+```
+
+We are concerned about this `  WndClass.lpfnWndProc = (WNDPROC)sub_140001724;`
+
+In that function i can see that `sub_1400015E7` is resposible for validation
+
+```cpp
+    {
+      GetWindowTextW(hWnd, String, 100);
+      v6 = sub_1400019AD(String);
+      if ( (unsigned int)sub_1400015E7(v6) )
+        MessageBoxW(0LL, L"Wrong Password", L"Error", 0);
+      else
+        MessageBoxW(0LL, L"Submit the flag as C00K3D{key_you_entered}", "C", 0);
+    }
+```
+
+I have renamed the function name so that it maybe clear what they are doing
+
+```cpp
+
+_BOOL8 __fastcall sub_1400015E7(const char *input)
+{
+  _DWORD buffer[4000]; // [rsp+20h] [rbp-60h] BYREF
+  _QWORD v3[3]; // [rsp+3EA0h] [rbp+3E20h] BYREF
+  int v4; // [rsp+3EBCh] [rbp+3E3Ch]
+  int v5; // [rsp+3EC0h] [rbp+3E40h]
+  int v6; // [rsp+3EC4h] [rbp+3E44h]
+  int v7; // [rsp+3EC8h] [rbp+3E48h]
+  int v8; // [rsp+3ECCh] [rbp+3E4Ch]
+  size_t v9; // [rsp+3ED0h] [rbp+3E50h]
+  int v10; // [rsp+3EDCh] [rbp+3E5Ch]
+
+  v9 = strlen(input);
+  v10 = 1;
+  if ( v9 != 8 )
+    return 1LL;
+  v3[0] = 0LL;
+  v3[1] = 0LL;
+  str_to_hex(input, v3);
+  v8 = *(v3 + 1);
+  v7 = HIBYTE(*(v3 + 1));
+  v6 = BYTE3(v3[0]);
+  v5 = BYTE2(v3[0]);
+  v4 = BYTE1(v3[0]);
+  number_seq_gen(4000, buffer);
+  return v7 != buffer[367] || v6 != buffer[377] || v5 != buffer[389] || v4 != buffer[385];
+}
+
+```
+
+So it is basically converting our string to hex, and generating a number sequence in the buffer of 4000 bytes.
+
+```cpp
+__int64 __fastcall number_seq_gen(int hardcoded4k, _DWORD *buffer)
+{
+  __int64 result; // rax
+  int j; // [rsp+4h] [rbp-Ch]
+  int v4; // [rsp+8h] [rbp-8h]
+  int i; // [rsp+Ch] [rbp-4h]
+
+  *buffer = 0;
+  for ( i = 1; ; ++i )
+  {
+    result = i;
+    if ( i >= hardcoded4k )
+      break;
+    v4 = buffer[i - 1] - i;
+    for ( j = 0; j < i; ++j )
+    {
+      if ( v4 == buffer[j] || v4 < 0 )
+      {
+        v4 = buffer[i - 1] + i;
+        break;
+      }
+    }
+    buffer[i] = v4;
+  }
+  return result;
+}
+```
+
+So basically you can reimplement it and check the buffer indexes `return v7 != buffer[367] || v6 != buffer[377] || v5 != buffer[389] || v4 != buffer[385];`
+
+or you can simple but a breakpoint and check it dynamically the buffer indexes are you password.
+
+# Lost
+
+Chall Description:
+
+![alt text](/static/images/cookedctf25/frustation/des3.png)
+
+It was a Simgle 3d Godot game, and its assets were encrypted (AES 256), For that I recompiled the godot custom export template with a 32byte key as an env variable (https://docs.godotengine.org/en/4.4/contributing/development/compiling/compiling_with_script_encryption_key.html),
+This is done so that when ever the game is exported its assets will be decrypted at runtime so the game assets cannot be stolen, but obviously the godot engine has to place
+that AES Key somewhere statically in the binary right? So it is done by default by the Godot engine, the key is placed as a byte array of 32byte just bellow a string `fae.is_null` something like that
+just search for the string and extract the aes 32 byte key and yes it can take alot of time to decompile. Enter the key in the godot decompiler.
+
+perhaps watch this video its like 10 times better than my writeup :
+https://www.youtube.com/watch?v=fWjuFmYGoSY&t=53s&ab_channel=Giffi
+
